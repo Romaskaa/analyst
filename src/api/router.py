@@ -2,12 +2,12 @@ import json
 import pathlib
 
 from fastapi import APIRouter, status
-
+from ..agents.rag_generator import generate_content_rag
 from ..agents.prompts import PROMPT_INFORMANT, PROMPT_SUMMARIZE_CHAT
 from ..agents.rag import retrieve
 from ..agents.workflow import agent
 from ..core.depends import gpt_oss_120b
-from ..core.schemas import Chat
+from ..core.schemas import Chat, RAGGenerateRequest, RAGGenerateResponse
 
 router = APIRouter(prefix="/api/v1")
 
@@ -61,3 +61,14 @@ async def analyze(url: str) -> dict:
 async def answer(chat: Chat) -> dict:
     result = await get_answer(chat.model_dump())
     return {"answer": result}
+
+
+@router.post("/rag-generate", status_code=status.HTTP_200_OK)
+async def rag_generate(data: RAGGenerateRequest) -> RAGGenerateResponse:
+    content = generate_content_rag(
+        topic=data.topic,
+        knowledge_text=data.knowledge_text,
+        top_k=data.top_k,
+        chunk_size=data.chunk_size,
+    )
+    return RAGGenerateResponse(content=content)

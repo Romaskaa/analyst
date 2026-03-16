@@ -36,11 +36,16 @@ class YandexCloudSettings(BaseSettings):
     folder_id: str = "<FOLDER_ID>"
     api_key: str = "<API_KEY>"
 
+class OpenRouterSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="OPENROUTER_")
+
+    base_url: str = "https://openrouter.ai/api/v1"
+    api_key: str = ""
 
 class Settings(BaseSettings):
     google: GoogleSettings = GoogleSettings()
     yandexcloud: YandexCloudSettings = YandexCloudSettings()
     rabbit: RabbitSettings = RabbitSettings()
-
+    openrouter: OpenRouterSettings = OpenRouterSettings()
 
 settings = Settings()

@@ -183,3 +183,13 @@ class GeneratedAlt(BaseModel):
 
 class ListGeneratedAlt(BaseModel):
     result: list[GeneratedAlt]
+
+class RAGGenerateRequest(BaseModel):
+    topic: str
+    knowledge_text: str
+    top_k: int = Field(default=5, ge=1, le=20)
+    chunk_size: int = Field(default=500, ge=100, le=4000)
+
+
+class RAGGenerateResponse(BaseModel):
+    content: str
