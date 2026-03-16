@@ -1,13 +1,20 @@
 import json
 import pathlib
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, UploadFile, status
+from ..agents.knowledge_base import load_knowledge_base, save_file
 from ..agents.rag_generator import generate_content_rag
 from ..agents.prompts import PROMPT_INFORMANT, PROMPT_SUMMARIZE_CHAT
 from ..agents.rag import retrieve
 from ..agents.workflow import agent
 from ..core.depends import gpt_oss_120b
-from ..core.schemas import Chat, RAGGenerateRequest, RAGGenerateResponse
+from ..core.schemas import (
+    Chat,
+    GenerateContentRequest,
+    RAGGenerateRequest,
+    RAGGenerateResponse,
+    UploadResponse,
+)
 
 router = APIRouter(prefix="/api/v1")
 
@@ -71,4 +78,16 @@ async def rag_generate(data: RAGGenerateRequest) -> RAGGenerateResponse:
         top_k=data.top_k,
         chunk_size=data.chunk_size,
     )
+    return RAGGenerateResponse(content=content)
+
+@router.post("/upload", status_code=status.HTTP_200_OK)
+async def upload(file: UploadFile) -> UploadResponse:
+    path = save_file(file)
+    return UploadResponse(path=path)
+
+
+@router.post("/generate-content", status_code=status.HTTP_200_OK)
+async def create_content(data: GenerateContentRequest) -> RAGGenerateResponse:
+    knowledge = load_knowledge_base()
+    content = generate_content_rag(topic=data.topic, knowledge_text=knowledge)
     return RAGGenerateResponse(content=content)

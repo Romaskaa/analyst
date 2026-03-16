@@ -193,3 +193,9 @@ class RAGGenerateRequest(BaseModel):
 
 class RAGGenerateResponse(BaseModel):
     content: str
+
+class GenerateContentRequest(BaseModel):
+    topic: str
+
+class UploadResponse(BaseModel):
+    path: str
