@@ -40,7 +40,7 @@ class OpenRouterSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="OPENROUTER_")
 
     base_url: str = "https://openrouter.ai/api/v1"
-    api_key: str = ""
+    api_key: str = "<API_KEY>"
 
 class Settings(BaseSettings):
     google: GoogleSettings = GoogleSettings()
