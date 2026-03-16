@@ -1,0 +1,33 @@
+[project]
+name = "seo-agents"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp>=3.13.3",
+    "bs4>=0.0.2",
+    "chromadb>=1.5.1",
+    "dotenv>=0.9.9",
+    "extruct>=0.18.0",
+    "fastapi[standard]>=0.129.0",
+    "faststream[rabbit]>=0.6.7",
+    "html-to-markdown>=2.24.5",
+    "langchain>=1.2.10",
+    "langchain-core>=1.2.12",
+    "langchain-openai>=1.1.9",
+    "langchain-text-splitters>=1.1.0",
+    "langgraph>=1.0.8",
+    "matplotlib>=3.10.8",
+    "networkx>=3.6.1",
+    "numpy>=2.4.2",
+    "playwright>=1.58.0",
+    "plotly>=6.5.2",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "pytz>=2025.2",
+    "retry-plus>=1.0.5",
+    "sentence-transformers>=5.2.3",
+    "types-pytz>=2025.2.0.20251108",
+    "ultimate-sitemap-parser>=1.8.0",
+]
