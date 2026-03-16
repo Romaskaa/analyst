@@ -52,6 +52,13 @@ gemma_3_27b_it: ChatOpenAI = ChatOpenAI(
     max_retries=3,
 )
 
+rag_stepfun: ChatOpenAI = ChatOpenAI(
+    api_key=SecretStr(settings.openrouter.api_key),
+    model="stepfun/step-3.5-flash:free",
+    base_url=settings.openrouter.base_url,
+    max_retries=3,
+)
+
 text_splitter: Final[TextSplitter] = RecursiveCharacterTextSplitter(
     chunk_size=CHUNK_SIZE,
     chunk_overlap=CHUNK_OVERLAP,

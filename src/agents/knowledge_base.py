@@ -104,4 +104,18 @@ def load_knowledge_base() -> str:
             if text:
                 texts.append(text)
 
-    return "\n\n".join(texts)
+        return "\n\n".join(texts)
+
+def load_knowledge_base_documents() -> list[tuple[str, str]]:
+    documents: list[tuple[str, str]] = []
+
+    if not UPLOAD_DIR.exists():
+        return documents
+
+    for path in UPLOAD_DIR.iterdir():
+        if path.is_file():
+            text = extract_text_from_file(path)
+            if text:
+                documents.append((path.name, text))
+
+    return documents
