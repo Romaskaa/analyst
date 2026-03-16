@@ -104,7 +104,7 @@ def load_knowledge_base() -> str:
             if text:
                 texts.append(text)
 
-        return "\n\n".join(texts)
+    return "\n\n".join(texts)
 
 def load_knowledge_base_documents() -> list[tuple[str, str]]:
     documents: list[tuple[str, str]] = []
