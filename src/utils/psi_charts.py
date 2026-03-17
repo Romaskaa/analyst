@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -82,9 +82,35 @@ def _extract_metrics_from_psi(
 
     audits = lighthouse.get("audits", {})
 
+    def _parse_display_value(display_value: str) -> float:
+        normalized = display_value.replace(",", ".").replace("\xa0", " ").strip().lower()
+        match = re.search(r"(\d+(?:\.\d+)?)", normalized)
+        if not match:
+            return 0.0
+
+        raw_value = float(match.group(1))
+        if "ms" in normalized:
+            return raw_value
+        if "s" in normalized:
+            return raw_value * 1000
+        return raw_value
+
     def numeric(audit_id: str) -> float:
-        value = audits.get(audit_id, {}).get("numericValue", 0)
-        return float(value or 0)
+        audit = audits.get(audit_id, {})
+
+        numeric_value = audit.get("numericValue")
+        if numeric_value is not None:
+            return float(numeric_value or 0)
+
+        if audit_id == "cumulative-layout-shift":
+            display_value = str(audit.get("displayValue", ""))
+            match = re.search(r"(\d+(?:[\.,]\d+)?)", display_value)
+            if match:
+                return float(match.group(1).replace(",", "."))
+            return 0.0
+
+        display_value = str(audit.get("displayValue", ""))
+        return _parse_display_value(display_value)
 
     metrics = {
         "LCP": numeric("largest-contentful-paint") / 1000,
