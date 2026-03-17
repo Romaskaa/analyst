@@ -60,11 +60,13 @@ def _parse_response(response: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
                 "interaction-to-next-paint",
                 "total-blocking-time",
                 "time-to-first-byte",
+                "speed-index",
             ]
             seo_audit_ids = []
             if "categories" in filtered_lh and "seo" in filtered_lh["categories"]:
                 seo_audit_ids = [
-                    ref["id"] for ref in filtered_lh["categories"]["seo"].get("auditRefs", [])
+                    ref["id"]
+                    for ref in filtered_lh["categories"]["seo"].get("auditRefs", [])
                 ]
             relevant_ids = set(cwv_audit_ids + seo_audit_ids)
             for audit_id in relevant_ids:
