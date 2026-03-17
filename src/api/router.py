@@ -26,6 +26,8 @@ PROMPT = """
 
 Запрос пользователя:
 {data}
+
+Обязательно вставляй ссылки из базы знаний, чтобы понимать, откуда взята информация
 """
 
 
@@ -38,17 +40,18 @@ async def get_answer(message: dict) -> str:
     print(retriv)
     messages.append(message)
     messages_str = json.dumps(messages, ensure_ascii=False)
-    #tokens = gpt_oss_120b.get_num_tokens(messages_str)
-    tokens = rag_stepfun.get_num_tokens(messages_str)
+    tokens = gpt_oss_120b.get_num_tokens(messages_str)
+    #tokens = rag_stepfun.get_num_tokens(messages_str)
 
     if tokens >= 50000:
         dialog_text = json.dumps(messages[1::], ensure_ascii=False)
         request = PROMPT_SUMMARIZE_CHAT.format(dialog_text=dialog_text)
-        #summarize = await gpt_oss_120b.ainvoke(request)
-        summarize = await rag_stepfun.ainvoke(request)
+        summarize = await gpt_oss_120b.ainvoke(request)
+        #summarize = await rag_stepfun.ainvoke(request)
         messages.clear()
         messages.append({"role": "assistant", "content": summarize.content})
-    #response = await gpt_oss_120b.ainvoke(PROMPT.format(data=message, rag_data=retriv))
+    response = await gpt_oss_120b.ainvoke(PROMPT.format(data=message, rag_data=retriv))
+    """
     try:
         response = await rag_stepfun.ainvoke(PROMPT.format(data=message, rag_data=retriv))
     except Exception as exc:
@@ -61,6 +64,7 @@ async def get_answer(message: dict) -> str:
             ),
         ) from exc
     print(response)
+    """
     messages.append({"role": "assistant", "content": response.content})
     return response.content  # type: ignore  # noqa: PGH003
 

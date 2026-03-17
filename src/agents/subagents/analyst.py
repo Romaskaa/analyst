@@ -1,6 +1,6 @@
 import logging
 from typing import TypedDict
-
+from langchain_core.exceptions import OutputParserException
 from langgraph.graph import END, START, StateGraph
 
 from ...core.depends import parser_expertise, parser_sc, parser_specialization, yandex_gpt
@@ -25,7 +25,11 @@ async def get_specialization(state: State) -> dict:
         format_instructions=parser_specialization.get_format_instructions(), data=state["markdown"]
     )
     chain = yandex_gpt | parser_specialization
-    result: SpecializationSite = await chain.ainvoke(request)
+    try:
+        result: SpecializationSite = await chain.ainvoke(request)
+    except OutputParserException as exc:
+        logger.warning("Не удалось распарсить специализацию, используем значение по умолчанию: %s", exc)
+        result = SpecializationSite(specialization="Не удалось определить специализацию компании")
     total_tokens = await count_tokens(request, result.model_dump_json())
     logger.info("Получения специализации компании")
     return {

@@ -16,7 +16,7 @@ class GoogleSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GOOGLE_")
 
     base_url: str = "https://www.googleapis.com"
-    psi_api_key: str = "<API_KEY>"
+    psi_api_key: str = ""
 
 
 class RabbitSettings(BaseSettings):
@@ -33,8 +33,8 @@ class RabbitSettings(BaseSettings):
 class YandexCloudSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="YANDEX_CLOUD_")
 
-    folder_id: str = "<FOLDER_ID>"
-    api_key: str = "<API_KEY>"
+    folder_id: str = ""
+    api_key: str = ""
 
 class OpenRouterSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="OPENROUTER_")
