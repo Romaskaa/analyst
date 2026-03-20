@@ -83,7 +83,9 @@ def _extract_metrics_from_psi(
     audits = lighthouse.get("audits", {})
 
     def _parse_display_value(display_value: str) -> float:
-        normalized = display_value.replace(",", ".").replace("\xa0", " ").strip().lower()
+        normalized = (
+            display_value.replace(",", ".").replace("\xa0", " ").strip().lower()
+        )
         match = re.search(r"(\d+(?:\.\d+)?)", normalized)
         if not match:
             return 0.0
@@ -283,3 +285,31 @@ def generate_psi_charts(psi_data: dict[str, Any]) -> dict[str, str]:
     summary_fig = _create_summary_chart(metrics, score)
     chart_paths["summary_chart"] = _save_chart(summary_fig, "summary_chart")
     return chart_paths
+
+def extract_psi_performance(
+    psi_data: dict[str, Any],
+) -> dict[str, float | int | None | str]:
+    """Return performance payload derived directly from Google PSI data.
+
+    Values are intentionally aligned with metrics used in generated charts.
+    """
+
+    metrics, score = _extract_metrics_from_psi(psi_data)
+    audits = psi_data.get("lighthouseResult", {}).get("audits", {})
+
+    fid_audit = audits.get("first-input-delay", {})
+    fid_value = fid_audit.get("numericValue")
+    fid = float(fid_value) if fid_value is not None else None
+
+    summary = (
+        f"Производительность по Google PSI: score={round(score)}, "
+        f"LCP={metrics['LCP']:.3f}с, CLS={metrics['CLS']:.3f}."
+    )
+
+    return {
+        "score": int(round(score)),
+        "lcp": round(metrics["LCP"], 3),
+        "fid": round(fid, 3) if fid is not None else None,
+        "cls": round(metrics["CLS"], 3),
+        "summary": summary,
+    }

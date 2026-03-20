@@ -13,7 +13,7 @@ from ...core.depends import (
 )
 from ...core.schemas import CWVReport, SiteAnalysisReport
 from ...integrations.google_psi_api import run_page_speed
-from ...utils.psi_charts import generate_psi_charts
+from ...utils.psi_charts import extract_psi_performance, generate_psi_charts
 from ..prompts import PROMPT_RESULT
 from .process import analyze_markdown
 from .utils import get_seo_issues
@@ -29,6 +29,7 @@ class State(TypedDict):
     seo_issue: list[dict]
     cwv: CWVReport
     charts: dict[str, str]
+    psi_performance: dict
     result: SiteAnalysisReport
     total_tokens: int
 
@@ -47,6 +48,7 @@ async def analyze_markups(state: State) -> dict:
 async def get_core_web_vitals(state: State) -> dict:
     cwv = await run_page_speed(state["url"])
     charts = generate_psi_charts(cwv)
+    psi_performance = extract_psi_performance(cwv)
     chain = cwv_prompt_template | yandex_gpt | parser_cwv
     count_cwv = yandex_gpt.get_num_tokens(str(cwv))
     result: CWVReport = await chain.ainvoke({"query": cwv})
@@ -54,7 +56,12 @@ async def get_core_web_vitals(state: State) -> dict:
     tokens = count_cwv + count_result
     total_tokens = state["total_tokens"] + tokens
     logger.info("Получение CWV")
-    return {"cwv": result.model_dump(), "charts": charts, "total_tokens": total_tokens}
+    return {
+        "cwv": result.model_dump(),
+        "charts": charts,
+        "psi_performance": psi_performance,
+        "total_tokens": total_tokens,
+    }
 
 
 async def final_result(state: State) -> dict:
@@ -77,6 +84,7 @@ async def final_result(state: State) -> dict:
     total_tokens = state["total_tokens"] + tokens
     logger.info("Результат SEO")
     result_data = result.to_dict
+    result_data["performance"] = state["psi_performance"]
     result_data["charts"] = state["charts"]
     return {"result": result_data, "total_tokens": total_tokens}
 
