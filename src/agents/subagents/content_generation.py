@@ -1,6 +1,6 @@
 from typing import TypedDict
 
-from .process import process_all_images
+from .process import get_src_images, process_all_images
 
 
 class State(TypedDict):
@@ -14,6 +14,6 @@ class State(TypedDict):
 
 
 async def create_alts(state: State) -> dict:
-    # src = await get_src_images(state["url"])
+    src = await get_src_images(state["html"], state["url"])
     tags, tokens = await process_all_images(src)
     return {"alt_tags": tags, "total_tokens": tokens}

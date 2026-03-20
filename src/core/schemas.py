@@ -190,12 +190,25 @@ class RAGGenerateRequest(BaseModel):
     top_k: int = Field(default=5, ge=1, le=20)
     chunk_size: int = Field(default=500, ge=100, le=4000)
 
-
 class RAGGenerateResponse(BaseModel):
     content: str
 
 class GenerateContentRequest(BaseModel):
     topic: str
+
+
+class UrlRequest(BaseModel):
+    url: str
+
+
+class TechnicalAuditRequest(BaseModel):
+    url: str
+    depth: int = Field(default=3, ge=1, le=10)
+
+
+class MetrikaOAuthRequest(BaseModel):
+    oauth_token: str
+    counter_id: str
 
 class UploadResponse(BaseModel):
     path: str

@@ -11,8 +11,12 @@ from ..core.depends import gpt_oss_120b
 from ..core.depends import rag_stepfun
 from ..core.schemas import (
     Chat,
+    MetrikaOAuthRequest,
+    TechnicalAuditRequest,
     UploadResponse,
+    UrlRequest,
 )
+from ..services import analyze_semantics, build_metrika_funnels, technical_audit, uiux_analysis
 
 router = APIRouter(prefix="/api/v1")
 logger = logging.getLogger(__name__)
@@ -79,6 +83,28 @@ async def analyze(url: str) -> dict:
     )
     return data
 
+
+@router.post("/semantic/analyze", status_code=status.HTTP_200_OK)
+async def semantic_analyze(request: UrlRequest) -> dict:
+    return await analyze_semantics(request.url)
+
+
+@router.post("/audit/technical", status_code=status.HTTP_200_OK)
+async def technical_audit_endpoint(request: TechnicalAuditRequest) -> dict:
+    return await technical_audit(request.url, depth=request.depth)
+
+
+@router.post("/uiux/analyze", status_code=status.HTTP_200_OK)
+async def uiux_analyze_endpoint(request: UrlRequest) -> dict:
+    return await uiux_analysis(request.url)
+
+
+@router.post("/metrika/funnels", status_code=status.HTTP_200_OK)
+async def metrika_funnels(request: MetrikaOAuthRequest) -> dict:
+    try:
+        return await build_metrika_funnels(request.oauth_token, request.counter_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
 @router.post("/chat", status_code=status.HTTP_200_OK)
 async def answer(chat: Chat) -> dict:

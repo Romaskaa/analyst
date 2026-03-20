@@ -12,17 +12,19 @@ queue_1 = RabbitQueue("queue_1")
 queue_2 = RabbitQueue("queue_2")
 queue_3 = RabbitQueue("queue_3")
 
+async def _forward(data: QueueData) -> None:
+    await broker.publish(data.model_dump(mode="json"), queue="main_queue")
 
 @broker.subscriber("queue_1")
 async def subscribe_queue_1(data: QueueData) -> None:
-    await broker.publish(..., queue="main_queue")
+    await _forward(data)
 
 
 @broker.subscriber("queue_2")
 async def subscribe_queue_2(data: QueueData) -> None:
-    await broker.publish(..., queue="main_queue")
+    await _forward(data)
 
 
 @broker.subscriber("queue_3")
 async def subscribe_queue_3(data: QueueData) -> None:
-    await broker.publish(..., queue="main_queue")
+    await _forward(data)
