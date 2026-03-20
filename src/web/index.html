@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Knowledge Base Assistant</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <aside class="sidebar card">
+        <div>
+          <p class="eyebrow">Knowledge Base</p>
+          <h1>Ассистент по базе знаний ДИО-Консалт</h1>
+          <p class="muted">
+            Загружайте документы, просматривайте состав базы знаний и задавайте вопросы!
+          </p>
+        </div>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <h2>Подключение API</h2>
+            <button id="refresh-files" class="secondary-button" type="button">Обновить</button>
+          </div>
+          <label class="field-label" for="api-base-url">Base URL</label>
+          <input id="api-base-url" class="text-input" type="text" value="/api/v1" />
+          <p class="helper-text">По умолчанию интерфейс работает с текущим FastAPI backend.</p>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <h2>Файлы базы знаний</h2>
+            <span id="files-counter" class="pill">0 файлов</span>
+          </div>
+          <form id="upload-form" class="upload-panel">
+            <label class="upload-dropzone" for="file-input">
+              <input
+                id="file-input"
+                name="files"
+                type="file"
+                multiple
+                accept=".pdf,.docx,.pptx,.xls,.xlsx,.txt,.png,.jpg,.jpeg"
+              />
+              <span class="upload-title">Перетащите файлы сюда или нажмите для выбора</span>
+              <span class="helper-text">Поддерживаются PDF, DOCX, PPTX, XLSX, TXT и изображения.</span>
+            </label>
+            <button id="upload-button" class="primary-button" type="submit">Загрузить в базу знаний</button>
+          </form>
+          <div id="upload-status" class="status-box" hidden></div>
+          <ul id="files-list" class="file-list"></ul>
+        </section>
+      </aside>
+
+      <main class="chat-layout card">
+        <header class="chat-header">
+          <div>
+            <p class="eyebrow">ИИ Чат</p>
+            <h2>Диалог с документами</h2>
+            <p class="muted">
+              Ответы генерируются на основе загруженной базы знаний.
+            </p>
+          </div>
+          <button id="reset-chat" class="secondary-button" type="button">Сбросить чат</button>
+        </header>
+
+        <section id="chat-messages" class="chat-messages" aria-live="polite"></section>
+
+        <form id="chat-form" class="chat-form">
+          <label class="field-label" for="chat-input">Ваш вопрос</label>
+          <div class="chat-composer">
+            <textarea
+              id="chat-input"
+              class="chat-textarea"
+              rows="4"
+              placeholder="Например: Какие рекомендации по SEO описаны в загруженных документах?"
+            ></textarea>
+            <button id="send-button" class="primary-button" type="submit">Отправить</button>
+          </div>
+        </form>
+
+        <div id="chat-status" class="status-box" hidden></div>
+      </main>
+    </div>
+
+    <template id="message-template">
+      <article class="message">
+        <div class="message-role"></div>
+        <div class="message-content"></div>
+      </article>
+    </template>
+
+    <script src="/assets/app.js" defer></script>
+  </body>
+</html>

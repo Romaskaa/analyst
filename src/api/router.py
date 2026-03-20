@@ -3,7 +3,7 @@ import logging
 import pathlib
 
 from fastapi import APIRouter, HTTPException, UploadFile, status
-from ..agents.knowledge_base import save_file
+from ..agents.knowledge_base import list_uploaded_files, save_file
 from ..agents.prompts import PROMPT_INFORMANT, PROMPT_SUMMARIZE_CHAT
 from ..agents.rag import retrieve
 from ..agents.workflow import agent
@@ -24,6 +24,11 @@ logger = logging.getLogger(__name__)
 messages: list = [
     {"role": "system", "content": PROMPT_INFORMANT},
 ]
+
+def reset_messages() -> None:
+    messages.clear()
+    messages.append({"role": "system", "content": PROMPT_INFORMANT})
+
 PROMPT = """
 Данные из RAG:
 {rag_data}
@@ -105,6 +110,17 @@ async def metrika_funnels(request: MetrikaOAuthRequest) -> dict:
         return await build_metrika_funnels(request.oauth_token, request.counter_id)
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+
+@router.post("/chat/reset", status_code=status.HTTP_200_OK)
+async def reset_chat() -> dict:
+    reset_messages()
+    return {"status": "ok"}
+
+
+@router.get("/knowledge-base/files", status_code=status.HTTP_200_OK)
+async def knowledge_base_files() -> dict:
+    return {"files": list_uploaded_files()}
 
 @router.post("/chat", status_code=status.HTTP_200_OK)
 async def answer(chat: Chat) -> dict:

@@ -106,6 +106,17 @@ def load_knowledge_base() -> str:
 
     return "\n\n".join(texts)
 
+def list_uploaded_files() -> list[dict[str, str]]:
+    if not UPLOAD_DIR.exists():
+        return []
+
+    files: list[dict[str, str]] = []
+    for path in sorted(UPLOAD_DIR.iterdir()):
+        if path.is_file():
+            files.append({"name": path.name, "path": str(path)})
+
+    return files
+
 def load_knowledge_base_documents() -> list[tuple[str, str]]:
     documents: list[tuple[str, str]] = []
 
