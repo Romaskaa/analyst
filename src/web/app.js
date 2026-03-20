@@ -45,6 +45,262 @@ function setStatus(target, message, type = 'success') {
   target.className = `status-box ${type}`;
 }
 
+function normalizeRenderableText(content) {
+  const normalized = String(content || '').replace(/\r\n?/g, '\n');
+  return normalized.includes('\\n') ? normalized.replace(/\\n/g, '\n').replace(/\\t/g, '\t') : normalized;
+}
+
+function looksLikeStructuredResponse(content) {
+  return /^(#{1,6}\s|[-*]\s|\d+\.\s|\|.+\||---\s*$)/m.test(content) || content.includes('```');
+}
+
+function createFragmentFromInline(text) {
+  const fragment = document.createDocumentFragment();
+  const pattern = /(\*\*[^*]+\*\*)|(`[^`]+`)|(\[[^\]]+\]\((https?:\/\/[^\s)]+)\))/g;
+  let cursor = 0;
+
+  for (const match of text.matchAll(pattern)) {
+    const [token] = match;
+    const index = match.index ?? 0;
+
+    if (index > cursor) {
+      fragment.append(document.createTextNode(text.slice(cursor, index)));
+    }
+
+    if (token.startsWith('**') && token.endsWith('**')) {
+      const strong = document.createElement('strong');
+      strong.textContent = token.slice(2, -2);
+      fragment.append(strong);
+    } else if (token.startsWith('`') && token.endsWith('`')) {
+      const code = document.createElement('code');
+      code.textContent = token.slice(1, -1);
+      fragment.append(code);
+    } else {
+      const linkMatch = token.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+      if (linkMatch) {
+        const anchor = document.createElement('a');
+        anchor.href = linkMatch[2];
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        anchor.textContent = linkMatch[1];
+        fragment.append(anchor);
+      } else {
+        fragment.append(document.createTextNode(token));
+      }
+    }
+
+    cursor = index + token.length;
+  }
+
+  if (cursor < text.length) {
+    fragment.append(document.createTextNode(text.slice(cursor)));
+  }
+
+  return fragment;
+}
+
+function appendInlineContent(target, text) {
+  target.append(createFragmentFromInline(text));
+}
+
+function isTableDividerRow(line) {
+  return /^\|?(\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/.test(line.trim());
+}
+
+function isTableRow(line) {
+  return /^\s*\|.+\|\s*$/.test(line);
+}
+
+function splitTableRow(line) {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim());
+}
+
+function buildMarkdownTable(lines) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'message-table-scroll';
+
+  const table = document.createElement('table');
+  table.className = 'message-table';
+
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  for (const cell of splitTableRow(lines[0])) {
+    const th = document.createElement('th');
+    appendInlineContent(th, cell);
+    headerRow.append(th);
+  }
+  thead.append(headerRow);
+  table.append(thead);
+
+  const bodyRows = lines.slice(2);
+  if (bodyRows.length) {
+    const tbody = document.createElement('tbody');
+    for (const row of bodyRows) {
+      const tr = document.createElement('tr');
+      for (const cell of splitTableRow(row)) {
+        const td = document.createElement('td');
+        appendInlineContent(td, cell);
+        tr.append(td);
+      }
+      tbody.append(tr);
+    }
+    table.append(tbody);
+  }
+
+  wrapper.append(table);
+  return wrapper;
+}
+
+function isSpecialBlockStart(line) {
+  return (
+    !line.trim() ||
+    /^```/.test(line) ||
+    /^#{1,6}\s+/.test(line) ||
+    /^---\s*$/.test(line) ||
+    /^\s*[-*]\s+/.test(line) ||
+    /^\s*\d+\.\s+/.test(line) ||
+    isTableRow(line)
+  );
+}
+
+function renderStructuredMessage(container, content) {
+  container.textContent = '';
+  const lines = content.split('\n');
+  let index = 0;
+
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    const line = rawLine.trimEnd();
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      index += 1;
+      continue;
+    }
+
+    if (/^```/.test(trimmed)) {
+      const codeLines = [];
+      index += 1;
+
+      while (index < lines.length && !/^```/.test(lines[index].trim())) {
+        codeLines.push(lines[index]);
+        index += 1;
+      }
+
+      if (index < lines.length) {
+        index += 1;
+      }
+
+      const pre = document.createElement('pre');
+      const code = document.createElement('code');
+      code.textContent = codeLines.join('\n');
+      pre.append(code);
+      container.append(pre);
+      continue;
+    }
+
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+    if (headingMatch) {
+      const level = Math.min(headingMatch[1].length, 6);
+      const heading = document.createElement(`h${level}`);
+      appendInlineContent(heading, headingMatch[2]);
+      container.append(heading);
+      index += 1;
+      continue;
+    }
+
+    if (/^---\s*$/.test(trimmed)) {
+      container.append(document.createElement('hr'));
+      index += 1;
+      continue;
+    }
+
+    if (isTableRow(trimmed) && index + 1 < lines.length && isTableDividerRow(lines[index + 1])) {
+      const tableLines = [trimmed, lines[index + 1].trim()];
+      index += 2;
+
+      while (index < lines.length && isTableRow(lines[index].trim())) {
+        tableLines.push(lines[index].trim());
+        index += 1;
+      }
+
+      container.append(buildMarkdownTable(tableLines));
+      continue;
+    }
+
+    if (/^\s*[-*]\s+/.test(rawLine)) {
+      const list = document.createElement('ul');
+      while (index < lines.length) {
+        const itemMatch = lines[index].match(/^\s*[-*]\s+(.*)$/);
+        if (!itemMatch) {
+          break;
+        }
+
+        const item = document.createElement('li');
+        appendInlineContent(item, itemMatch[1]);
+        list.append(item);
+        index += 1;
+      }
+      container.append(list);
+      continue;
+    }
+
+    if (/^\s*\d+\.\s+/.test(rawLine)) {
+      const list = document.createElement('ol');
+      while (index < lines.length) {
+        const itemMatch = lines[index].match(/^\s*\d+\.\s+(.*)$/);
+        if (!itemMatch) {
+          break;
+        }
+
+        const item = document.createElement('li');
+        appendInlineContent(item, itemMatch[1]);
+        list.append(item);
+        index += 1;
+      }
+      container.append(list);
+      continue;
+    }
+
+    const paragraphLines = [trimmed];
+    index += 1;
+
+    while (index < lines.length && !isSpecialBlockStart(lines[index])) {
+      paragraphLines.push(lines[index].trim());
+      index += 1;
+    }
+
+    const paragraph = document.createElement('p');
+    paragraphLines.forEach((paragraphLine, paragraphIndex) => {
+      if (paragraphIndex > 0) {
+        paragraph.append(document.createElement('br'));
+      }
+      appendInlineContent(paragraph, paragraphLine);
+    });
+    container.append(paragraph);
+  }
+}
+
+function renderMessageContent(contentNode, message) {
+  const normalizedContent = normalizeRenderableText(message.content);
+  const isStructuredAssistantMessage =
+    message.role === 'assistant' && looksLikeStructuredResponse(normalizedContent);
+
+  contentNode.classList.toggle('rich-content', isStructuredAssistantMessage);
+
+  if (isStructuredAssistantMessage) {
+    renderStructuredMessage(contentNode, normalizedContent);
+    return;
+  }
+
+  contentNode.textContent = normalizedContent;
+}
+
 function renderMessages() {
   elements.chatMessages.innerHTML = '';
 
@@ -56,7 +312,7 @@ function renderMessages() {
 
     root.classList.add(message.role);
     role.textContent = message.role === 'user' ? 'Вы' : 'Ассистент';
-    content.textContent = message.content;
+    renderMessageContent(content, message);
 
     elements.chatMessages.appendChild(fragment);
   }
