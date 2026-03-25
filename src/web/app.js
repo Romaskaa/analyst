@@ -27,12 +27,17 @@ const elements = {
 };
 
 function apiUrl(path) {
-  const baseUrl = elements.apiBaseUrl.value.trim().replace(/\/$/, '') || '/api/v1';
+  const rawBaseUrl= elements.apiBaseUrl instanceof HTMLInputElement ? elements.apiBaseUrl.value : '/api/v1';
+  const baseUrl = rawBaseUrl.trim().replace(/\/$/, '') || '/api/v1';
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   return `${baseUrl}${normalizedPath}`;
 }
 
 function setStatus(target, message, type = 'success') {
+
+  if (!target) {
+    return;
+  }
 
   if (!message) {
     target.hidden = true;
@@ -366,6 +371,11 @@ async function fetchFiles() {
 
 async function uploadFiles(event) {
   event.preventDefault();
+  if (!(elements.fileInput instanceof HTMLInputElement) || !(elements.uploadButton instanceof HTMLButtonElement)) {
+    setStatus(elements.uploadStatus, 'Форма загрузки недоступна: не найден input[type=file].', 'error');
+    return;
+  }
+
   const files = [...elements.fileInput.files];
 
   if (!files.length) {
@@ -415,6 +425,11 @@ async function uploadFiles(event) {
 }
 
 async function resetChat() {
+  if (!(elements.resetChat instanceof HTMLButtonElement)) {
+    setStatus(elements.chatStatus, 'Кнопка сброса недоступна.', 'error');
+    return;
+  }
+
   elements.resetChat.disabled = true;
   setStatus(elements.chatStatus, 'Сбрасываю диалог...');
 
@@ -441,6 +456,15 @@ async function resetChat() {
 
 async function sendMessage(event) {
   event.preventDefault();
+  if (!(elements.chatInput instanceof HTMLTextAreaElement)) {
+    setStatus(elements.chatStatus, 'Поле ввода вопроса недоступно.', 'error');
+    return;
+  }
+  if (!(elements.sendButton instanceof HTMLButtonElement)) {
+    setStatus(elements.chatStatus, 'Кнопка отправки недоступна.', 'error');
+    return;
+  }
+
   const question = elements.chatInput.value.trim();
 
   if (!question) {
@@ -485,15 +509,23 @@ async function sendMessage(event) {
 }
 
 function bootstrap() {
+  if (!elements.chatMessages || !elements.messageTemplate || !elements.filesList || !elements.filesCounter) {
+    console.error('UI bootstrap aborted: required DOM nodes are missing.');
+    return;
+  }
+
+  if (!(elements.apiBaseUrl instanceof HTMLInputElement)) {
+    console.warn('Base URL input not found, fallback to /api/v1 will be used.');
+  }
 
   renderMessages();
   renderFiles([]);
   fetchFiles();
 
-  elements.uploadForm.addEventListener('submit', uploadFiles);
-  elements.refreshFiles.addEventListener('click', fetchFiles);
-  elements.resetChat.addEventListener('click', resetChat);
-  elements.chatForm.addEventListener('submit', sendMessage);
+  elements.uploadForm?.addEventListener('submit', uploadFiles);
+  elements.refreshFiles?.addEventListener('click', fetchFiles);
+  elements.resetChat?.addEventListener('click', resetChat);
+  elements.chatForm?.addEventListener('submit', sendMessage);
 }
 
 bootstrap();
