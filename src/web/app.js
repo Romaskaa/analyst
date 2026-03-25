@@ -528,4 +528,5 @@ function bootstrap() {
   elements.chatForm?.addEventListener('submit', sendMessage);
 }
 
+
 bootstrap();
