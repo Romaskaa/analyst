@@ -130,3 +130,11 @@ def load_knowledge_base_documents() -> list[tuple[str, str]]:
                 documents.append((path.name, text))
 
     return documents
+
+def remove_uploaded_file(path: Path) -> None:
+
+    try:
+        if path.exists() and path.is_file():
+            path.unlink()
+    except Exception as exc:
+        print("Ошибка удаления файла:", path, exc)

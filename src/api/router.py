@@ -3,9 +3,9 @@ import logging
 import pathlib
 
 from fastapi import APIRouter, HTTPException, UploadFile, status
-from ..agents.knowledge_base import list_uploaded_files, save_file
+from ..agents.knowledge_base import save_file
 from ..agents.prompts import PROMPT_INFORMANT, PROMPT_SUMMARIZE_CHAT
-from ..agents.rag import retrieve
+from ..agents.rag import list_knowledge_base_files, retrieve
 from ..agents.workflow import agent
 from ..core.depends import gpt_oss_120b
 from ..core.depends import rag_stepfun
@@ -36,7 +36,10 @@ PROMPT = """
 Запрос пользователя:
 {data}
 
-Обязательно вставляй ссылки из базы знаний, чтобы понимать, откуда взята информация
+Требования к ответу:
+1) Если используешь данные из базы знаний, обязательно указывай источник в формате [Имя файла](ссылка).
+2) В конце ответа добавляй блок "Источники" со списком использованных файлов без повторов.
+3) Не придумывай источники, используй только те, что пришли из RAG в полях File и Link.
 """
 
 
@@ -120,7 +123,7 @@ async def reset_chat() -> dict:
 
 @router.get("/knowledge-base/files", status_code=status.HTTP_200_OK)
 async def knowledge_base_files() -> dict:
-    return {"files": list_uploaded_files()}
+    return {"files": list_knowledge_base_files()}
 
 @router.post("/chat", status_code=status.HTTP_200_OK)
 async def answer(chat: Chat) -> dict:

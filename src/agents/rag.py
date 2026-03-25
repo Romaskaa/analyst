@@ -9,7 +9,7 @@ from uuid import uuid4
 import chromadb
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
-from .knowledge_base import load_knowledge_base_documents
+from .knowledge_base import UPLOAD_DIR, load_knowledge_base_documents, remove_uploaded_file
 
 from ..settings import CHROMA_PATH
 
@@ -63,16 +63,45 @@ def _sync_knowledge_base_index() -> None:
             indexed_files.add(file_name)
 
     for file_name, text in kb_docs:
+        file_path = UPLOAD_DIR / file_name
         if file_name in indexed_files:
+            remove_uploaded_file(file_path)
             continue
         indexing(
             text=text,
             metadata={
                 "source": KB_SOURCE,
                 "kb_file": file_name,
+                "kb_link": f"kb://{file_name}",
                 "category": "knowledge_base",
             },
         )
+        remove_uploaded_file(file_path)
+
+def list_knowledge_base_files() -> list[dict[str, str]]:
+    """Возвращает список уже проиндексированных файлов базы знаний."""
+    _sync_knowledge_base_index()
+    collection = client.get_or_create_collection(INDEX_NAME)
+    existing = collection.get(where={"source": KB_SOURCE}, include=["metadatas"])
+
+    seen: set[str] = set()
+    files: list[dict[str, str]] = []
+    for metadata in existing.get("metadatas", []):
+        if not isinstance(metadata, dict):
+            continue
+        file_name = metadata.get("kb_file")
+        if not isinstance(file_name, str) or file_name in seen:
+            continue
+        seen.add(file_name)
+        files.append(
+            {
+                "name": file_name,
+                "link": str(metadata.get("kb_link", f"kb://{file_name}")),
+            }
+        )
+
+    files.sort(key=lambda item: item["name"].lower())
+    return files
 
 def clean_text(text: str) -> str:
     """Очистка текста от экранированных символов и Unicode"""
@@ -155,16 +184,22 @@ def retrieve(
 
         # Очищаем метаданные если нужно
         cleaned_metadata = {}
-        for key, value in metadata.items():
+        safe_metadata = metadata if isinstance(metadata, dict) else {}
+        for key, value in safe_metadata.items():
             if isinstance(value, str):
                 cleaned_metadata[key] = clean_text(value)
             else:
                 cleaned_metadata[key] = value
 
+        file_name = cleaned_metadata.get("kb_file", "")
+        file_link = cleaned_metadata.get("kb_link", "")
+
         cleaned_results.append(
             f"**Relevance score:** {round(distance, 2)}\n"
             f"**Source:** {cleaned_metadata.get('source', '')}\n"
             f"**Category:** {cleaned_metadata.get('category', '')}\n"
+            f"**File:** {file_name}\n"
+            f"**Link:** {file_link}\n"
             "**Document:**\n"
             f"{cleaned_doc}"
         )
