@@ -33,6 +33,7 @@ function apiUrl(path) {
 }
 
 function setStatus(target, message, type = 'success') {
+
   if (!message) {
     target.hidden = true;
     target.textContent = '';
@@ -321,6 +322,7 @@ function renderMessages() {
 }
 
 function renderFiles(files) {
+
   elements.filesCounter.textContent = `${files.length} файлов`;
   elements.filesList.innerHTML = '';
 
@@ -483,6 +485,7 @@ async function sendMessage(event) {
 }
 
 function bootstrap() {
+
   renderMessages();
   renderFiles([]);
   fetchFiles();

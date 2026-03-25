@@ -9,7 +9,7 @@ from uuid import uuid4
 import chromadb
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
-from .knowledge_base import UPLOAD_DIR, load_knowledge_base_documents
+from .knowledge_base import load_knowledge_base_documents
 
 from ..settings import CHROMA_PATH
 
@@ -64,10 +64,8 @@ def _sync_knowledge_base_index() -> None:
 
     for file_name, text in kb_docs:
         if file_name in indexed_files:
-            with contextlib.suppress(OSError):
-                (UPLOAD_DIR / file_name).unlink()
             continue
-        chunk_ids = indexing(
+        indexing(
             text=text,
             metadata={
                 "source": KB_SOURCE,
@@ -75,9 +73,6 @@ def _sync_knowledge_base_index() -> None:
                 "category": "knowledge_base",
             },
         )
-        if chunk_ids:
-            with contextlib.suppress(OSError):
-                (UPLOAD_DIR / file_name).unlink()
 
 def clean_text(text: str) -> str:
     """Очистка текста от экранированных символов и Unicode"""
