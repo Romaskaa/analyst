@@ -11,7 +11,6 @@ CHROMA_PATH = BASE_DIR / ".chroma"
 
 load_dotenv(ENV_PATH)
 
-
 class GoogleSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GOOGLE_")
 

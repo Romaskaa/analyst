@@ -9,6 +9,7 @@ const state = {
 };
 
 const elements = {
+  apiBaseUrl: document.getElementById('api-base-url'),
   uploadForm: document.getElementById('upload-form'),
   fileInput: document.getElementById('file-input'),
   uploadButton: document.getElementById('upload-button'),
@@ -26,8 +27,7 @@ const elements = {
 };
 
 function apiUrl(path) {
-  const baseUrlInput = elements.apiBaseUrl?.value ?? '/api/v1';
-  const baseUrl = baseUrlInput.trim().replace(/\/$/, '') || '/api/v1';
+  const baseUrl = elements.apiBaseUrl.value.trim().replace(/\/$/, '') || '/api/v1';
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   return `${baseUrl}${normalizedPath}`;
 }
@@ -325,6 +325,10 @@ function renderFiles(files) {
   elements.filesList.innerHTML = '';
 
   if (!files.length) {
+    const emptyState = document.createElement('li');
+    emptyState.className = 'file-item';
+    emptyState.textContent = 'Файлы ещё не загружены.';
+    elements.filesList.appendChild(emptyState);
     return;
   }
 
@@ -370,12 +374,11 @@ async function uploadFiles(event) {
   elements.uploadButton.disabled = true;
   const uploaded = [];
   const failed = [];
-  let completedCount = 0;
-  const totalCount = files.length;
 
-  const uploadTasks = files.map(async (file) => {
+  for (const file of files) {
     const formData = new FormData();
     formData.append('file', file);
+    setStatus(elements.uploadStatus, `Загружаю: ${file.name}...`);
 
     try {
       const response = await fetch(apiUrl('/upload'), {
@@ -391,13 +394,8 @@ async function uploadFiles(event) {
       uploaded.push(payload.path || file.name);
     } catch (error) {
       failed.push(`${file.name} (${error.message})`);
-    } finally {
-      completedCount += 1;
-      setStatus(elements.uploadStatus, `Загрузка файлов: ${completedCount}/${totalCount}`);
     }
-  });
-
-  await Promise.all(uploadTasks);
+  }
 
   elements.uploadButton.disabled = false;
   elements.fileInput.value = '';
