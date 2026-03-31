@@ -33,13 +33,17 @@ PROMPT = """
 Данные из RAG:
 {rag_data}
 
+Контекст диалога:
+{chat_context}
+
 Запрос пользователя:
-{data}
+{user_query}
 
 Требования к ответу:
 1) Если используешь данные из базы знаний, обязательно указывай источник в формате [Имя файла](ссылка).
 2) В конце ответа добавляй блок "Источники" со списком использованных файлов без повторов.
 3) Не придумывай источники, используй только те, что пришли из RAG в полях File и Link.
+4) Учитывай контекст текущего диалога (имена, договоренности, уточнения) и используй его при ответе, если это релевантно вопросу.
 """
 
 
@@ -61,8 +65,16 @@ async def get_answer(message: dict) -> str:
         summarize = await gpt_oss_120b.ainvoke(request)
         #summarize = await rag_stepfun.ainvoke(request)
         messages.clear()
+        messages.append({"role": "system", "content": PROMPT_INFORMANT})
         messages.append({"role": "assistant", "content": summarize.content})
-    response = await gpt_oss_120b.ainvoke(PROMPT.format(data=message, rag_data=retriv))
+    chat_context = json.dumps(messages[1:], ensure_ascii=False)
+    response = await gpt_oss_120b.ainvoke(
+        PROMPT.format(
+            user_query=message["content"],
+            rag_data=retriv,
+            chat_context=chat_context,
+        )
+    )
     """
     try:
         response = await rag_stepfun.ainvoke(PROMPT.format(data=message, rag_data=retriv))
