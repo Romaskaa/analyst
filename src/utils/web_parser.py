@@ -1,5 +1,5 @@
 import random
-import logging
+
 import html_to_markdown
 from bs4 import BeautifulSoup
 from playwright.async_api import Browser, BrowserContext, Page
@@ -113,24 +113,6 @@ LANGUAGES: tuple[str, ...] = (
     "fr-FR,fr;q=0.9,en;q=0.8",
 )
 
-logger = logging.getLogger(__name__)
-
-async def _goto_with_fallback(page: Page, url: str, timeout_ms: int = 60_000) -> bool:
-    """Пытается открыть страницу с мягкой деградацией по таймаутам."""
-
-    try:
-        await page.goto(url, timeout=timeout_ms, wait_until="domcontentloaded")
-        return True
-    except PlaywrightTimeoutError:
-        logger.warning("Таймаут навигации до domcontentloaded для %s", url)
-
-    try:
-        # Вторая попытка: самый ранний этап навигации, чтобы получить хотя бы частичный DOM
-        await page.goto(url, timeout=15_000, wait_until="commit")
-        return True
-    except PlaywrightTimeoutError:
-        logger.warning("Повторный таймаут навигации до commit для %s", url)
-        return False
 
 def generate_user_agent() -> str:
     """Генерирует пользователя-подробный User-agent заголовки
@@ -252,9 +234,7 @@ async def get_markdown_content(browser: Browser, url: str) -> str:
     """
 
     page = await _get_current_page(browser)
-    is_navigated = await _goto_with_fallback(page, url)
-    if not is_navigated:
-        return ""
+    await page.goto(url)
     try:
         await page.wait_for_load_state("networkidle", timeout=5_000)
         await page.wait_for_load_state("load", timeout=5_000)
@@ -274,9 +254,7 @@ async def get_html_content(browser: Browser, url: str) -> str:
     """
 
     page = await _get_current_page(browser)
-    is_navigated = await _goto_with_fallback(page, url)
-    if not is_navigated:
-        return ""
+    await page.goto(url, timeout=60000)
     try:
         await page.wait_for_load_state("networkidle", timeout=60000)
         await page.wait_for_load_state("load", timeout=60000)

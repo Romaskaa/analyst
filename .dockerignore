@@ -1,0 +1,17 @@
+.git
+__pycache__/
+*.pyc
+.venv/
+*.log
+*.cache
+data/
+*.pyo
+*.pyd
+node_modules
+data
+models
+*.pt
+*.bin
+*.parquet
+*.csv
+*.log

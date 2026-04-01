@@ -186,9 +186,9 @@ def validate_semantic_tags(soup: BeautifulSoup) -> list[Issue]:
     return issues
 
 
-def validate_images(soup: BeautifulSoup) -> list[Issue]:
+def validate_images(soup: BeautifulSoup) -> list[Issue] | tuple:
     """Проверка SEO оптимизации изображений"""
-
+    urls: list = []
     issues: list[Issue] = []
     images = soup.find_all("img")
     if not images:
@@ -206,8 +206,10 @@ def validate_images(soup: BeautifulSoup) -> list[Issue]:
 
     for image in images:
         alt, src = image.get("alt", ""), image.get("src", "")
+
         if not alt:
             images_without_alt += 1
+            urls.append(src)
         else:
             images_with_alt += 1
         if (src and any(type in src.lower() for type in ["image", "img", "picture"])) and not any(  # noqa: A001, PGH003, RUF100
@@ -247,16 +249,19 @@ def validate_images(soup: BeautifulSoup) -> list[Issue]:
             )
         )
 
-    return issues
+    return issues, urls
 
 
 def find_seo_issues(soup: BeautifulSoup) -> list[Issue]:
     """Нахождение замечаний касаемо SEO оптимизации разметки страницы"""
-
-    return [
-        *validate_title(soup),
-        *validate_description(soup),
-        *validate_heading(soup),
-        *validate_images(soup),
-        *validate_semantic_tags(soup),
-    ]
+    issues = []
+    issues.extend(validate_title(soup))
+    issues.extend(validate_description(soup))
+    issues.extend(validate_heading(soup))
+    img_result = validate_images(soup)
+    if isinstance(img_result, tuple):
+        issues.extend(img_result[0])
+    else:
+        issues.extend(img_result)
+    issues.extend(validate_semantic_tags(soup))
+    return issues

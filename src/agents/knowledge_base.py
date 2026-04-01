@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from pathlib import Path
 
@@ -12,12 +12,45 @@ from pptx import Presentation
 
 UPLOAD_DIR = Path("storage/uploads")
 
+
+def _score_human_readable_filename(value: str) -> int:
+    score = 0
+    score += sum(char.isalpha() for char in value) * 2
+    score += sum("\u0400" <= char <= "\u04FF" for char in value) * 3
+    score -= value.count("Ð") * 4
+    score -= value.count("Ñ") * 4
+    score -= value.count("\\x") * 6
+    score -= sum(ord(char) < 32 for char in value) * 10
+    return score
+
+
+def normalize_filename(name: str | None) -> str:
+    raw_name = Path(name or "uploaded_file").name.strip() or "uploaded_file"
+    candidates = [raw_name]
+
+    if "\\x" in raw_name:
+        try:
+            candidates.append(raw_name.encode("utf-8").decode("unicode_escape"))
+        except UnicodeDecodeError:
+            pass
+
+    for candidate in list(candidates):
+        try:
+            candidates.append(candidate.encode("latin1").decode("utf-8"))
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            pass
+
+    best = max(dict.fromkeys(candidates), key=_score_human_readable_filename)
+    return best.replace("\x00", "").strip() or "uploaded_file"
+
+
 def save_file(file: UploadFile) -> str:
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    path = UPLOAD_DIR / (file.filename or "uploaded_file")
+    file_name = normalize_filename(file.filename)
+    path = UPLOAD_DIR / file_name
 
-    with path.open("wb") as f:
-        f.write(file.file.read())
+    with path.open("wb") as destination:
+        destination.write(file.file.read())
 
     return str(path)
 
@@ -49,10 +82,10 @@ def read_docx(path: Path) -> str:
 
 
 def read_pptx(path: Path) -> str:
-    prs = Presentation(path)
+    presentation = Presentation(path)
     text: list[str] = []
 
-    for slide in prs.slides:
+    for slide in presentation.slides:
         for shape in slide.shapes:
             if hasattr(shape, "text"):
                 text.append(shape.text)
@@ -61,13 +94,13 @@ def read_pptx(path: Path) -> str:
 
 
 def read_xlsx(path: Path) -> str:
-    df = pd.read_excel(path)
-    return df.to_string()
+    dataframe = pd.read_excel(path)
+    return dataframe.to_string()
 
 
 def read_image(path: Path) -> str:
-    img = Image.open(path)
-    return pytesseract.image_to_string(img)
+    image = Image.open(path)
+    return pytesseract.image_to_string(image)
 
 
 def extract_text_from_file(path: Path) -> str:
@@ -87,35 +120,9 @@ def extract_text_from_file(path: Path) -> str:
         if ext in {"png", "jpg", "jpeg"}:
             return read_image(path)
         return ""
-    except Exception as exc:
-        print("Ошибка чтения файла:", path, exc)
+    except Exception:
         return ""
 
-
-def load_knowledge_base() -> str:
-    texts: list[str] = []
-
-    if not UPLOAD_DIR.exists():
-        return ""
-
-    for path in UPLOAD_DIR.iterdir():
-        if path.is_file():
-            text = extract_text_from_file(path)
-            if text:
-                texts.append(text)
-
-    return "\n\n".join(texts)
-
-def list_uploaded_files() -> list[dict[str, str]]:
-    if not UPLOAD_DIR.exists():
-        return []
-
-    files: list[dict[str, str]] = []
-    for path in sorted(UPLOAD_DIR.iterdir()):
-        if path.is_file():
-            files.append({"name": path.name, "path": str(path)})
-
-    return files
 
 def load_knowledge_base_documents() -> list[tuple[str, str]]:
     documents: list[tuple[str, str]] = []
@@ -123,18 +130,19 @@ def load_knowledge_base_documents() -> list[tuple[str, str]]:
     if not UPLOAD_DIR.exists():
         return documents
 
-    for path in UPLOAD_DIR.iterdir():
-        if path.is_file():
-            text = extract_text_from_file(path)
-            if text:
-                documents.append((path.name, text))
+    for path in sorted(UPLOAD_DIR.iterdir()):
+        if not path.is_file():
+            continue
+        text = extract_text_from_file(path)
+        if text:
+            documents.append((normalize_filename(path.name), text))
 
     return documents
 
-def remove_uploaded_file(path: Path) -> None:
 
+def remove_uploaded_file(path: Path) -> None:
     try:
         if path.exists() and path.is_file():
             path.unlink()
-    except Exception as exc:
-        print("Ошибка удаления файла:", path, exc)
+    except Exception:
+        return

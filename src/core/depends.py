@@ -1,5 +1,7 @@
 from typing import Final
 
+from langchain.agents.middleware import SummarizationMiddleware
+from langchain_core.language_models import ModelProfile
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
@@ -9,9 +11,8 @@ from langchain_text_splitters import (
 )
 from pydantic import SecretStr
 
-from ..agents.prompts import PROMPT_CWV, PROMPT_MARKDOWN, PROMPT_RESULT
-from ..settings import settings
-from .schemas import (
+from ..agents.prompts import PROMPT_CWV, PROMPT_MARKDOWN, PROMPT_RESULT, PROMPT_SUMMARIZE_CHAT
+from ..schemas import (
     CWVReport,
     ExpertiseSite,
     GenerateAIOContent,
@@ -21,6 +22,7 @@ from .schemas import (
     SiteAnalysisReport,
     SpecializationSite,
 )
+from ..settings import settings
 
 CHUNK_SIZE = 1500
 CHUNK_OVERLAP = 50
@@ -43,6 +45,7 @@ gpt_oss_120b: ChatOpenAI = ChatOpenAI(
     model=f"gpt://{settings.yandexcloud.folder_id}/gpt-oss-120b/latest",
     base_url="https://llm.api.cloud.yandex.net/v1",
     max_retries=3,
+    profile=ModelProfile(max_input_tokens=128_000),
 )
 
 gemma_3_27b_it: ChatOpenAI = ChatOpenAI(
@@ -52,19 +55,20 @@ gemma_3_27b_it: ChatOpenAI = ChatOpenAI(
     max_retries=3,
 )
 
-rag_stepfun: ChatOpenAI = ChatOpenAI(
-    api_key=SecretStr(settings.openrouter.api_key),
-    model="stepfun/step-3.5-flash:free",
-    base_url=settings.openrouter.base_url,
-    max_retries=3,
-)
-
 text_splitter: Final[TextSplitter] = RecursiveCharacterTextSplitter(
     chunk_size=CHUNK_SIZE,
     chunk_overlap=CHUNK_OVERLAP,
     length_function=len,
     separators=["\n\n", "\n", " ", ""],
 )
+
+summarization_middleware = SummarizationMiddleware(
+    model=gpt_oss_120b,
+    trigger=("fraction", 0.8),
+    keep=("fraction", 0.3),
+    summary_prompt=PROMPT_SUMMARIZE_CHAT,
+)
+
 
 parser_markdown = PydanticOutputParser(pydantic_object=SEOAnalysisReport)
 
