@@ -57,5 +57,7 @@ def get_current_user(
     return CurrentUser(
         user_id=user_id,
         email=payload.get("email"),  # type: ignore  # noqa: PGH003
-        role=payload.get("role"),  # type: ignore  # noqa: PGH003
     )
+
+
+CurrentUserDep = Annotated[CurrentUser, Depends(get_current_user)]

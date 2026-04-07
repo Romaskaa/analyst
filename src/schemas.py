@@ -218,7 +218,7 @@ class Role(StrEnum):
 
 
 class Chat(BaseModel):
-    user_id: str
+    generation_id: str
     role: Role = Role.USER
     text: str
 

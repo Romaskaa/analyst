@@ -105,7 +105,6 @@ async def _process_image_chunk(links: list[str]) -> tuple[list, int]:
 
 async def process_all_images(all_links: list[str]) -> tuple[list[str], int]:
     """Разбивает все ссылки на три части и обрабатывает их параллельно."""
-    print(all_links[:3])
     all_alts, total_tokens = await _process_image_chunk(all_links[:3])
     # Разделение на три примерно равные части без numpy
     # n = len(all_links)

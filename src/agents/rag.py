@@ -196,10 +196,14 @@ async def retrieve(
 
     queries = []
     if metadata_filter:
-        filtered_params = params.copy()
-        filtered_params["where"] = metadata_filter
-        queries.append(collection.query(**filtered_params, include=["documents", "metadatas", "distances"]))
-
+        if len(metadata_filter) == 0:
+            pass  # пустой фильтр не передаём
+        elif len(metadata_filter) == 1:
+            params["where"] = metadata_filter
+        else:
+            # Несколько полей → оборачиваем в $and
+            params["where"] = {"$and": [{k: v} for k, v in metadata_filter.items()]}
+            
     kb_params = params.copy()
     kb_params["where"] = {"source": KB_SOURCE}
     queries.append(collection.query(**kb_params, include=["documents", "metadatas", "distances"]))

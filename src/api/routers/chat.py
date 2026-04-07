@@ -1,40 +1,36 @@
-﻿from typing import Any
-
-from fastapi import APIRouter, Request, UploadFile, status
+from fastapi import APIRouter, UploadFile, status
 
 from ...agents import chatbot
 from ...agents.knowledge_base import save_file
 from ...agents.rag import list_knowledge_base_files
 from ...schemas import Chat, Role, UploadResponse
+from ..dependencies import CurrentUserDep
 
 router_chat = APIRouter()
 
 
 @router_chat.post("/chat", status_code=status.HTTP_200_OK)
-async def answer(request: Request) -> Chat | dict[str, str]:
-    payload: dict[str, Any] = await request.json()
-    user_id = str(payload.get("user_id") or "public")
-    user_prompt = str(payload.get("text") or payload.get("content") or "").strip()
-    result = await chatbot.call_chatbot(user_id=user_id, user_prompt=user_prompt)
-
-    if "content" in payload and "text" not in payload:
-        return {"answer": result}
-
-    return Chat(user_id=user_id, role=Role.AI, text=result)
+async def answer(chat: Chat, current_user: CurrentUserDep) -> Chat:
+    result = await chatbot.call_chatbot(
+        user_id=current_user.user_id,
+        user_prompt=chat.text,
+        generation_id=chat.generation_id,
+    )
+    return Chat(role=Role.AI, text=result, generation_id=chat.generation_id)
 
 
 @router_chat.post("/chat/reset", status_code=status.HTTP_200_OK)
-async def reset_chat() -> dict[str, str]:
-    chatbot.reset_chat_history()
+async def reset_chat(current_user: CurrentUserDep) -> dict[str, str]:
+    chatbot.reset_chat_history(user_id=current_user.user_id)
     return {"status": "ok"}
 
 
 @router_chat.get("/knowledge-base/files", status_code=status.HTTP_200_OK)
-async def knowledge_base_files() -> dict[str, list[dict[str, str]]]:
+async def knowledge_base_files(_current_user: CurrentUserDep) -> dict[str, list[dict[str, str]]]:
     return {"files": list_knowledge_base_files()}
 
 
 @router_chat.post("/upload", status_code=status.HTTP_200_OK)
-async def upload(file: UploadFile) -> UploadResponse:
+async def upload(file: UploadFile, _current_user: CurrentUserDep) -> UploadResponse:
     path = save_file(file)
     return UploadResponse(path=path)

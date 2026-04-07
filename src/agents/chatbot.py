@@ -1,5 +1,6 @@
-﻿import os
-from pathlib import Path
+import os
+import sqlite3
+from uuid import UUID
 
 from langchain.agents import create_agent
 from langchain.messages import HumanMessage
@@ -25,7 +26,9 @@ PROMPT = """
 """
 
 
-async def call_chatbot(user_id: str, user_prompt: str) -> str:
+async def call_chatbot(user_id: UUID, user_prompt: str, generation_id: str) -> str:
+    """Call chatbot agent for user dialogue within a specific generation context."""
+
     async with AsyncSqliteSaver.from_conn_string(os.fspath(SQLITE_PATH)) as checkpointer:
         await checkpointer.setup()
         agent = create_agent(
@@ -34,7 +37,10 @@ async def call_chatbot(user_id: str, user_prompt: str) -> str:
             middleware=[summarization_middleware],
             checkpointer=checkpointer,
         )
-        rag = await retrieve(query=user_prompt, metadata_filter={"tenant_id": user_id})
+        rag = await retrieve(
+            query=user_prompt,
+            metadata_filter={"tenant_id": user_id, "generation_id": generation_id},
+        )
 
         result = await agent.ainvoke(
             {
@@ -47,12 +53,14 @@ async def call_chatbot(user_id: str, user_prompt: str) -> str:
     return result["messages"][-1].content
 
 
-def reset_chat_history() -> None:
-    sqlite_files = [
-        Path(os.fspath(SQLITE_PATH)),
-        Path(f"{os.fspath(SQLITE_PATH)}-shm"),
-        Path(f"{os.fspath(SQLITE_PATH)}-wal"),
-    ]
-    for path in sqlite_files:
-        if path.exists():
-            path.unlink()
+def reset_chat_history(user_id: UUID) -> None:
+    db_path = os.fspath(SQLITE_PATH)
+    connection = sqlite3.connect(db_path)
+    try:
+        thread_id = str(user_id)
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
+        cursor.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
+        connection.commit()
+    finally:
+        connection.close()
