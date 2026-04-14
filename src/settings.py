@@ -19,11 +19,11 @@ load_dotenv(ENV_PATH)
 class PostgresSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="POSTGRES_")
 
-    host: str = ""
+    host: str = "postgres"
     port: int = 5432
-    user: str = "user"
-    password: str = ""
-    db: str = ""
+    user: str = "<USER>"
+    password: str = "<PASSWORD>"
+    db: str = "<DB>"
     driver: Literal["asyncpg"] = "asyncpg"
 
     @property
@@ -35,7 +35,7 @@ class GoogleSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GOOGLE_")
 
     base_url: str = "https://www.googleapis.com"
-    psi_api_key: str = ""
+    psi_api_key: str = "<API_KEY>"
 
 
 class RabbitSettings(BaseSettings):
@@ -52,8 +52,8 @@ class RabbitSettings(BaseSettings):
 class YandexCloudSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="YANDEX_CLOUD_")
 
-    folder_id: str = ""
-    api_key: str = ""
+    folder_id: str = "<FOLDER_ID>"
+    api_key: str = "<API_KEY>"
 
 
 class JWTSettings(BaseSettings):
@@ -96,9 +96,9 @@ class Settings(BaseSettings):
     jwt: JWTSettings = JWTSettings()
     app: AppSettings = AppSettings()
     mail: MailSettings = MailSettings()
-    secret_key: str = ""
+    secret_key: str = "<SECRET_KEY>"
     chromium_ws_endpoint: str = "ws://localhost:3000/playwright/chromium"
-    frontend_url: str = "http://localhost:3000"
+    frontend_url: str = "http://localhost:5173"
 
 
 settings = Settings()
